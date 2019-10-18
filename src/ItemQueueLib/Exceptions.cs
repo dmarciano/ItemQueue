@@ -14,4 +14,40 @@ namespace SMC.Utilities.Queues
 
         public NoActionException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
+
+    [Serializable]
+    public class CancellationRequestedException : Exception
+    {
+        public CancellationRequestedException() :this("The requested operation cannot be completed because a cancellation has been requested.") { }
+
+        public CancellationRequestedException(string message) : base(message) { }
+
+        public CancellationRequestedException(string message, Exception innerException) : base(message, innerException) { }
+
+        public CancellationRequestedException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    }
+
+    [Serializable]
+    public class StartException : Exception
+    {
+        public StartException() { }
+
+        public StartException(string message) : base(message) { }
+
+        public StartException(string message, Exception innerException) : base(message, innerException) { }
+
+        public StartException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    }
+
+    [Serializable]
+    public class NotRunningException : Exception
+    {
+        public NotRunningException() { }
+
+        public NotRunningException(string message) : base(message) { }
+
+        public NotRunningException(string message, Exception innerException) : base(message, innerException) { }
+
+        public NotRunningException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    }
 }

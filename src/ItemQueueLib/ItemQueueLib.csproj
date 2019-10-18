@@ -45,6 +45,7 @@
     <Compile Include="ActionErrorEventArgs.cs" />
     <Compile Include="Exceptions.cs" />
     <Compile Include="Queues\ActionQueue.cs" />
+    <Compile Include="Queues\PredicateQueue.cs" />
     <Compile Include="Queues\FunctionQueue.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="QueueStatus.cs" />

@@ -1,9 +1,14 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 
 namespace SMC.Utilities.Queues
 {
+    /// <summary>
+    /// A multi-threaded queue which will call the set <see cref="Action{T}"/> on each item in the queue.
+    /// </summary>
+    /// <typeparam name="T">The type of the item that can be added to the queue.</typeparam>
     public class ActionQueue<T> : IDisposable
     {
         #region Events
@@ -15,10 +20,13 @@ namespace SMC.Utilities.Queues
         #region Variables
         private readonly ConcurrentQueue<T> _Queue;
         private readonly ManualResetEventSlim _ItemsAvailable;
+        private readonly ManualResetEventSlim _Finished;
         private Action<T> _Action = null;
         private Action<T> _Callback = null;
         private QueueStatus _Status;
-        private bool _CancellationRequest = false;
+        private bool _CancellationRequested = false;
+        private Thread _ProcessingThread;
+        private bool _ProcessRemainingItems;
         #endregion
 
         #region Properties
@@ -27,6 +35,7 @@ namespace SMC.Utilities.Queues
         /// </summary>
         /// <remarks>If no name was specified when the queue was created, a random <see cref="Guid"/> is assigned as the queue's name.</remarks>
         public string Name { get; }
+
         /// <summary>
         /// The current status of the queue.  See <see cref="QueueStatus"/>.
         /// </summary>
@@ -42,26 +51,33 @@ namespace SMC.Utilities.Queues
                 OnStatusChanged(value);
             }
         }
+
         /// <summary>
         /// Indicates whether the queue has been stopped.  See <see cref="Stop(bool)"/>.
         /// </summary>
         /// <value><c>true</c> is the queue is stopping; otherwise <c>false</c>.</value>
-        public bool CancellationRequest
+        public bool CancellationRequested
         {
             get
             {
-                return _CancellationRequest;
+                return _CancellationRequested;
             }
             private set
             {
-                _CancellationRequest = value;
+                _CancellationRequested = value;
                 if (value) Status = QueueStatus.Cancelling;
             }
         }
+
         /// <summary>
         /// Total number of unprocessed items currently in the queue.
         /// </summary>
         public int ItemsInQueue => _Queue.Count;
+
+        /// <summary>
+        /// The current exception which is preventing the queue from processing more items.
+        /// </summary>
+        public Exception Error { get; private set; } = null;
         #endregion
 
         #region Constructors
@@ -113,6 +129,8 @@ namespace SMC.Utilities.Queues
 
             _Queue = new ConcurrentQueue<T>();
             _ItemsAvailable = new ManualResetEventSlim(false);
+            _Finished = new ManualResetEventSlim(false);
+            Status = QueueStatus.Initialized;
         }
         #endregion
 
@@ -120,21 +138,103 @@ namespace SMC.Utilities.Queues
         /// <summary>
         /// Starts the queue to begin processing items.
         /// </summary>
+        /// <returns><c>true</c> is the queue was successfully started, otherwise <c>false</c>.</returns>
+        /// <remarks>The queue will be run on a background thread with normal priority.</remarks>
         /// <exception cref="NoActionException">No action was specified in the constructor or using the <see cref="SetAction(Action{T})"/> method.</exception>
-        public void Start()
+        /// <exception cref="CancellationRequestedException">The queue is in the process of being canceled.</exception>
+        /// <exception cref="StartException">The queue could not be started.  See the exception message property for the exact reason.</exception>
+        public bool Start()
+        {
+            return Start(true, ThreadPriority.Normal);
+        }
+
+        /// <summary>
+        /// Starts the queue to begin processing items.
+        /// </summary>
+        /// <param name="isBackground"><c>true</c> is the queue should process items on a background thread, otherwise <c>false</c>.</param>
+        /// <returns><c>true</c> is the queue was successfully started, otherwise <c>false</c>.</returns>
+        /// <remarks>The queue will be run with normal priority.</remarks>
+        /// <exception cref="NoActionException">No action was specified in the constructor or using the <see cref="SetAction(Action{T})"/> method.</exception>
+        /// <exception cref="CancellationRequestedException">The queue is in the process of being canceled.</exception>
+        /// <exception cref="StartException">The queue could not be started.  See the exception message property for the exact reason.</exception>
+        public bool Start(bool isBackground)
+        {
+            return Start(isBackground, ThreadPriority.Normal);
+        }
+
+        /// <summary>
+        /// Starts the queue to begin processing items.
+        /// </summary>
+        /// <param name="priority">The <see cref="ThreadPriority"/> to run the background thread at.</param>
+        /// <returns><c>true</c> is the queue was successfully started, otherwise <c>false</c>.</returns>
+        /// <remarks>The queue will be run on a background thread.</remarks>
+        /// <exception cref="NoActionException">No action was specified in the constructor or using the <see cref="SetAction(Action{T})"/> method.</exception>
+        /// <exception cref="CancellationRequestedException">The queue is in the process of being canceled.</exception>
+        /// <exception cref="StartException">The queue could not be started.  See the exception message property for the exact reason.</exception>
+        public bool Start(ThreadPriority priority)
+        {
+            return Start(true, priority);
+        }
+
+        /// <summary>
+        /// Starts the queue to begin processing items.
+        /// </summary>
+        /// <param name="isBackground"><c>true</c> is the queue should process items on a background thread, otherwise <c>false</c>.</param>
+        /// <param name="priority">The <see cref="ThreadPriority"/> to run the background thread at.</param>
+        /// <returns><c>true</c> is the queue was successfully started, otherwise <c>false</c>.</returns>
+        /// <exception cref="NoActionException">No action was specified in the constructor or using the <see cref="SetAction(Action{T})"/> method.</exception>
+        /// <exception cref="CancellationRequestedException">The queue is in the process of being canceled.</exception>
+        /// <exception cref="StartException">The queue could not be started.  See the exception message property for the exact reason.</exception>
+        public bool Start(bool isBackground, ThreadPriority priority)
         {
             if (null == _Action) throw new NoActionException("An action must be specified before the queue can start processing items.");
-
-            //TODO: Start processing
+            if (CancellationRequested) throw new CancellationRequestedException("The queue cannot be started at this time because it is in the process of cancelling.");
+            if (QueueStatus.Initialized != Status && QueueStatus.Stopped != Status) throw new StartException("The queue must be either in the Initialize or Stopped state to be started again.");
+            try
+            {
+                Status = QueueStatus.Starting;
+                _ProcessingThread = new Thread(Run) { Name = Name, IsBackground = isBackground, Priority = priority };
+                _ProcessingThread.Start();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                OnErrorOccurred(default(T), "An exception occurred while starting the queue.", ex);
+                return false;
+            }
         }
 
         /// <summary>
         /// Stops the queue from processing items.
         /// </summary>
-        /// <param name="processRemainingJob">Set to <c>true</c> to process any remaining jobs in the queue; <c>false</c> to discard all remaining items.</param>
-        public void Stop(bool processRemainingJob)
+        /// <param name="processRemainingItems">Set to <c>true</c> to process any remaining items in the queue; <c>false</c> to discard all remaining items.</param>
+        /// <returns><c>true</c> is the stop request was successfully received and processed, otherwise <c>false</c>.</returns>
+        public bool Stop(bool processRemainingItems)
         {
-            //TODO: Stop processing
+            try
+            {
+                if (CancellationRequested
+                    || QueueStatus.Initialized == Status
+                    || QueueStatus.Stopping == Status
+                    || QueueStatus.Stopped == Status
+                    || QueueStatus.Disposing == Status
+                    || QueueStatus.Disposed == Status) return true;
+
+                Status = QueueStatus.Stopping;
+                CancellationRequested = true;
+                _ProcessRemainingItems = processRemainingItems;
+                _ItemsAvailable.Set();
+                _Finished.Wait();
+                _Finished.Reset();
+                Status = QueueStatus.Stopped;
+                CancellationRequested = false;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                OnErrorOccurred(default(T), "An exception occurred while stopping the queue.", ex);
+                return false;
+            }
         }
 
         /// <summary>
@@ -164,6 +264,122 @@ namespace SMC.Utilities.Queues
         public void StopCallbacks()
         {
             _Callback = null;
+        }
+
+        /// <summary>
+        /// Enqueue item for processing.
+        /// </summary>
+        /// <param name="item">The item to enqueue.</param>
+        public void Enqueue(T item)
+        {
+            if (QueueStatus.Starting != Status && QueueStatus.Processing != Status && QueueStatus.Waiting != Status) throw new NotRunningException($"Queue must be in the Processing or Waiting state in order to enqueue new items. (Current State: {Status.ToString()})");
+            try
+            {
+                _Queue.Enqueue(item);
+                _ItemsAvailable.Set();
+            }
+            catch (Exception ex)
+            {
+                OnErrorOccurred(item, "An exception occurred while attempting to enqueue an item.", ex);
+            }
+        }
+
+        /// <summary>
+        /// Enqueue a multiple items at once.
+        /// </summary>
+        /// <param name="items">The <see cref="List{T}"/> of items to enqueue.</param>
+        public void Enqueue(List<T> items)
+        {
+            if (QueueStatus.Starting != Status && QueueStatus.Processing != Status && QueueStatus.Waiting != Status) throw new NotRunningException($"Queue must be in the Processing or Waiting state in order to enqueue new items. (Current State: {Status.ToString()})");
+            T item = default(T);
+            try
+            {
+                for (var i = 0; i < items.Count; i++)
+                {
+                    item = items[i];
+                    _Queue.Enqueue(item);
+                }
+                _ItemsAvailable.Set();
+            }
+            catch (Exception ex)
+            {
+                OnErrorOccurred(item, "An exception occurred while attempting to enqueue items.", ex);
+            }
+        }
+
+        private void Run()
+        {
+            Status = QueueStatus.Processing;
+            try
+            {
+                while (!CancellationRequested)
+                {
+                    if (_Queue.Count < 1)
+                        _ItemsAvailable.Reset();
+                    else
+                        ProcessItems();
+
+                    Status = QueueStatus.Waiting;
+                    _ItemsAvailable.Wait();
+                }
+
+                ProcessItems();
+            }
+            catch (Exception ex)
+            {
+                OnErrorOccurred(default(T), "An exception occurred in main processing thread.", ex);
+            }
+        }
+
+        private void ProcessItems()
+        {
+            Status = QueueStatus.Processing;
+            T currentItem = default(T);
+            try
+            {
+                if (CancellationRequested)
+                {
+                    if (_ProcessRemainingItems)
+                    {
+                        foreach (var i in _Queue)
+                        {
+                            if (_Queue.TryDequeue(out currentItem))
+                            {
+                                _Action(currentItem);
+                                //TODO: Handle callback
+                            }
+                            else
+                            {
+                                OnErrorOccurred(currentItem, $"An exception occurred while dequeuing an item for processing.");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        while (!_Queue.IsEmpty) _Queue.TryDequeue(out var _);
+                    }
+
+                    _Finished.Set();
+                }
+                else
+                {
+                    foreach (var i in _Queue)
+                    {
+                        if (_Queue.TryDequeue(out currentItem))
+                        {
+                            _Action(currentItem);
+                        }
+                        else
+                        {
+                            OnErrorOccurred(currentItem, $"An exception occurred while dequeuing an item for processing.");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                OnErrorOccurred(currentItem, $"An exception occurred while processing item '{currentItem}'.", ex);
+            }
         }
         #endregion
 
@@ -205,6 +421,8 @@ namespace SMC.Utilities.Queues
 
         protected virtual void OnErrorOccurred(ActionErrorEventArgs<T> e)
         {
+            Status = QueueStatus.Error;
+            Error = e.Error;
             ErrorOccurred?.Invoke(this, e);
         }
         #endregion
@@ -220,11 +438,10 @@ namespace SMC.Utilities.Queues
                 if (disposing)
                 {
                     Stop(true);
-                    // TODO: dispose managed state (managed objects).
                 }
                 Status = QueueStatus.Disposed;
-                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
-                // TODO: set large fields to null.
+                _ProcessingThread.Join();
+                _ProcessingThread = null;
 
                 disposedValue = true;
             }
