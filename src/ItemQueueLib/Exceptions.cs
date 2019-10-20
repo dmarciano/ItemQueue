@@ -16,6 +16,30 @@ namespace SMC.Utilities.Queues
     }
 
     [Serializable]
+    public class NoFunctionException : Exception
+    {
+        public NoFunctionException() { }
+
+        public NoFunctionException(string message) : base(message) { }
+
+        public NoFunctionException(string message, Exception innerException) : base(message, innerException) { }
+
+        public NoFunctionException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    }
+
+    [Serializable]
+    public class NoPredicateException : Exception
+    {
+        public NoPredicateException() { }
+
+        public NoPredicateException(string message) : base(message) { }
+
+        public NoPredicateException(string message, Exception innerException) : base(message, innerException) { }
+
+        public NoPredicateException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    }
+
+    [Serializable]
     public class CancellationRequestedException : Exception
     {
         public CancellationRequestedException() :this("The requested operation cannot be completed because a cancellation has been requested.") { }

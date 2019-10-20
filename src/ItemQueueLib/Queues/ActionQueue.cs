@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 
+// ReSharper disable once CheckNamespace
 namespace SMC.Utilities.Queues
 {
     /// <summary>
@@ -21,10 +22,10 @@ namespace SMC.Utilities.Queues
         private readonly ConcurrentQueue<T> _Queue;
         private readonly ManualResetEventSlim _ItemsAvailable;
         private readonly ManualResetEventSlim _Finished;
-        private Action<T> _Action = null;
-        private Action<T> _Callback = null;
+        private Action<T> _Action;
+        private Action<T> _Callback;
         private QueueStatus _Status;
-        private bool _CancellationRequested = false;
+        private bool _CancellationRequested;
         private Thread _ProcessingThread;
         private bool _ProcessRemainingItems;
         #endregion
@@ -41,10 +42,7 @@ namespace SMC.Utilities.Queues
         /// </summary>
         public QueueStatus Status
         {
-            get
-            {
-                return _Status;
-            }
+            get => _Status;
             private set
             {
                 _Status = value;
@@ -58,10 +56,7 @@ namespace SMC.Utilities.Queues
         /// <value><c>true</c> is the queue is stopping; otherwise <c>false</c>.</value>
         public bool CancellationRequested
         {
-            get
-            {
-                return _CancellationRequested;
-            }
+            get => _CancellationRequested;
             private set
             {
                 _CancellationRequested = value;
@@ -77,7 +72,7 @@ namespace SMC.Utilities.Queues
         /// <summary>
         /// The current exception which is preventing the queue from processing more items.
         /// </summary>
-        public Exception Error { get; private set; } = null;
+        public Exception Error { get; private set; }
         #endregion
 
         #region Constructors
@@ -291,14 +286,15 @@ namespace SMC.Utilities.Queues
         public void Enqueue(List<T> items)
         {
             if (QueueStatus.Starting != Status && QueueStatus.Processing != Status && QueueStatus.Waiting != Status) throw new NotRunningException($"Queue must be in the Processing or Waiting state in order to enqueue new items. (Current State: {Status.ToString()})");
-            T item = default(T);
+            var item = default(T);
             try
             {
-                for (var i = 0; i < items.Count; i++)
+                foreach (var i in items)
                 {
-                    item = items[i];
+                    item = i;
                     _Queue.Enqueue(item);
                 }
+
                 _ItemsAvailable.Set();
             }
             catch (Exception ex)
@@ -334,7 +330,7 @@ namespace SMC.Utilities.Queues
         private void ProcessItems()
         {
             Status = QueueStatus.Processing;
-            T currentItem = default(T);
+            var currentItem = default(T);
             try
             {
                 if (CancellationRequested)
@@ -346,11 +342,13 @@ namespace SMC.Utilities.Queues
                             if (_Queue.TryDequeue(out currentItem))
                             {
                                 _Action(currentItem);
-                                //TODO: Handle callback
+                                OnActionCompleted(currentItem,true, string.Empty);
+                                _Callback?.Invoke(currentItem);
                             }
                             else
                             {
-                                OnErrorOccurred(currentItem, $"An exception occurred while dequeuing an item for processing.");
+                                OnErrorOccurred(currentItem, "An exception occurred while dequeuing an item for processing.");
+                                OnActionCompleted(currentItem, false, "An exception occurred while dequeuing an item for processing.");
                             }
                         }
                     }
@@ -368,10 +366,13 @@ namespace SMC.Utilities.Queues
                         if (_Queue.TryDequeue(out currentItem))
                         {
                             _Action(currentItem);
+                            OnActionCompleted(currentItem, true, string.Empty);
+                            _Callback?.Invoke(currentItem);
                         }
                         else
                         {
-                            OnErrorOccurred(currentItem, $"An exception occurred while dequeuing an item for processing.");
+                            OnErrorOccurred(currentItem, "An exception occurred while dequeuing an item for processing.");
+                            OnActionCompleted(currentItem, false, "An exception occurred while dequeuing an item for processing.");
                         }
                     }
                 }
@@ -379,6 +380,7 @@ namespace SMC.Utilities.Queues
             catch (Exception ex)
             {
                 OnErrorOccurred(currentItem, $"An exception occurred while processing item '{currentItem}'.", ex);
+                OnActionCompleted(currentItem, false, $"An exception occurred while processing item '{currentItem}'.");
             }
         }
         #endregion
@@ -428,7 +430,7 @@ namespace SMC.Utilities.Queues
         #endregion
 
         #region IDisposable Support
-        private bool disposedValue = false; // To detect redundant calls
+        private bool disposedValue; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)
         {
