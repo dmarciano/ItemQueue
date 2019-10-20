@@ -119,7 +119,7 @@ namespace ItemQueueLib.Tests
         public void NullActionSetTest()
         {
             var actionQueue = new ActionQueue<int>();
-            actionQueue.SetAction(value => value++);
+            //actionQueue.SetAction(value => value++);
             actionQueue.SetAction(null);
         }
 

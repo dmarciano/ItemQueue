@@ -283,7 +283,7 @@ namespace SMC.Utilities.Queues
         /// <param name="item">The item to enqueue.</param>
         public void Enqueue(T item)
         {
-            if (QueueStatus.Starting != Status && QueueStatus.Processing != Status && QueueStatus.Waiting != Status) throw new NotRunningException($"Queue must be in the Processing or Waiting state in order to enqueue new items. (Current State: {Status.ToString()})");
+            if (QueueStatus.Initialized != Status && QueueStatus.Starting != Status && QueueStatus.Processing != Status && QueueStatus.Waiting != Status) throw new NotRunningException($"Queue must be in the Processing or Waiting state in order to enqueue new items. (Current State: {Status.ToString()})");
             try
             {
                 _Queue.Enqueue(item);
@@ -301,7 +301,7 @@ namespace SMC.Utilities.Queues
         /// <param name="items">The <see cref="List{T}"/> of items to enqueue.</param>
         public void Enqueue(List<T> items)
         {
-            if (QueueStatus.Starting != Status && QueueStatus.Processing != Status && QueueStatus.Waiting != Status) throw new NotRunningException($"Queue must be in the Processing or Waiting state in order to enqueue new items. (Current State: {Status.ToString()})");
+            if (QueueStatus.Initialized != Status && QueueStatus.Starting != Status && QueueStatus.Processing != Status && QueueStatus.Waiting != Status) throw new NotRunningException($"Queue must be in the Processing or Waiting state in order to enqueue new items. (Current State: {Status.ToString()})");
             var item = default(T);
             try
             {
@@ -467,18 +467,11 @@ namespace SMC.Utilities.Queues
             }
         }
 
-        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-        // ~ActionQueue() {
-        //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-        //   Dispose(false);
-        // }
-
         // This code added to correctly implement the disposable pattern.
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             Dispose(true);
-            // TODO: uncomment the following line if the finalizer is overridden above.
             // GC.SuppressFinalize(this);
         }
         #endregion
