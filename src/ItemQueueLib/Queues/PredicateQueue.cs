@@ -76,17 +76,31 @@ namespace SMC.Utilities.Queues
         /// <summary>
         /// Create a new predicate queue.
         /// </summary>
-        public PredicateQueue() : this(null, null, string.Empty) { }
+        public PredicateQueue() : this(null, null,null, string.Empty) { }
 
         /// <summary>
         /// Create a new predicate queue with the specific name.
         /// </summary>
         /// <param name="queueName">The name for this queue.</param>
         /// <remarks>The <paramref name="queueName"/> is also used as the name of the background thread.</remarks>
-        public PredicateQueue(string queueName) : this(null, null, queueName) { }
+        public PredicateQueue(string queueName) : this(null, null,null, queueName) { }
 
         /// <summary>
         /// Create a new predicate queue with the specified predicate.
+        /// </summary>
+        /// <param name="predicate">The predicate that defines the conditions of the element to call the action on.</param>
+        public PredicateQueue(Predicate<T> predicate) : this(predicate, null, null, string.Empty) { }
+
+        /// <summary>
+        /// Create a new predicate queue with the specified predicate and queue name.
+        /// </summary>
+        /// <param name="predicate">The predicate that defines the conditions of the element to call the action on.</param>
+        /// <param name="queueName">The name for this queue.</param>
+        /// <remarks>The <paramref name="queueName"/> is also used as the name of the background thread.</remarks>
+        public PredicateQueue(Predicate<T> predicate, string queueName) : this(predicate, null, null, queueName) { }
+
+        /// <summary>
+        /// Create a new predicate queue with the specified predicate and action.
         /// </summary>
         /// <param name="predicate">The predicate that defines the conditions of the element to call the <paramref name="action"/> on.</param>
         /// <param name="action">The action to call on each item in the queue.</param>

@@ -8,6 +8,82 @@ namespace ItemQueueLib.Tests
     [TestClass]
     public class ActionQueueTests
     {
+        // ReSharper disable once InconsistentNaming
+        private const string QUEUE_NAME = "action_queue_name";
+
+        [TestMethod]
+        public void ConstructorWithQueueNameTest()
+        {
+            var sum = 0;
+            var actionQueue = new ActionQueue<int>(QUEUE_NAME);
+            actionQueue.SetAction(value => sum += value);
+            actionQueue.Start();
+            actionQueue.Enqueue(1);
+            actionQueue.Enqueue(2);
+            actionQueue.Stop(true);
+
+            Assert.IsTrue(sum == 3);
+            Assert.AreEqual(actionQueue.Name, QUEUE_NAME, false);
+        }
+
+        [TestMethod]
+        public void ConstructorWithActionTest()
+        {
+            var sum = 0;
+            var actionQueue = new ActionQueue<int>(value => sum += value);
+            actionQueue.Start();
+            actionQueue.Enqueue(1);
+            actionQueue.Enqueue(2);
+            actionQueue.Stop(true);
+
+            Assert.IsTrue(sum == 3);
+        }
+
+        [TestMethod]
+        public void ConstructorWithActionCallbackTest()
+        {
+            var sum = 0;
+            var callbackSum = 0;
+            var actionQueue = new ActionQueue<int>(value => sum += value, value => callbackSum += value);
+            actionQueue.Start();
+            actionQueue.Enqueue(1);
+            actionQueue.Enqueue(2);
+            actionQueue.Stop(true);
+
+            Assert.IsTrue(sum == 3);
+            Assert.IsTrue(callbackSum == 3);
+        }
+
+        [TestMethod]
+        public void ConstructorWithActionQueueNameTest()
+        {
+            var sum = 0;
+            var actionQueue = new ActionQueue<int>(value => sum += value, QUEUE_NAME);
+            actionQueue.Start();
+            actionQueue.Enqueue(1);
+            actionQueue.Enqueue(2);
+            actionQueue.Stop(true);
+
+            Assert.IsTrue(sum == 3);
+            Assert.AreEqual(actionQueue.Name, QUEUE_NAME, false);
+        }
+
+        [TestMethod]
+        public void ConstructorWithAllParametersTest()
+        {
+            var sum = 0;
+            var callbackSum = 0;
+            var actionQueue = new ActionQueue<int>(value => sum += value, value=>callbackSum+=value, QUEUE_NAME);
+            actionQueue.Start();
+            actionQueue.Enqueue(1);
+            actionQueue.Enqueue(2);
+            actionQueue.Stop(true);
+
+            Assert.IsTrue(sum == 3);
+            Assert.IsTrue(callbackSum == 3);
+            Assert.AreEqual(actionQueue.Name, QUEUE_NAME, false);
+        }
+
         [TestMethod]
         public void SummationTest()
         {
@@ -16,9 +92,10 @@ namespace ItemQueueLib.Tests
             actionQueue.SetAction(value => sum += value);
             actionQueue.Start();
             actionQueue.Enqueue(1);
+            actionQueue.Enqueue(2);
             actionQueue.Stop(true);
 
-            Assert.IsTrue(sum == 1);
+            Assert.IsTrue(sum == 3);
         }
 
         [TestMethod]
@@ -104,7 +181,22 @@ namespace ItemQueueLib.Tests
             Assert.AreEqual(result, "Hello, World!", false);
         }
 
-        //TODO: Test callbacks
+        [TestMethod]
+        public void CallbackTest()
+        {
+            var sum = 0;
+            var callbackSum = 0;
+            var actionQueue = new ActionQueue<int>();
+            actionQueue.SetAction(value => sum += value);
+            actionQueue.SetCallback(value => callbackSum += value);
+            actionQueue.Start();
+            actionQueue.Enqueue(1);
+            actionQueue.Enqueue(2);
+            actionQueue.Stop(true);
+
+            Assert.IsTrue(sum == 3);
+            Assert.IsTrue(callbackSum == 3);
+        }
 
         [TestMethod]
         [ExpectedException(typeof(NoActionException))]

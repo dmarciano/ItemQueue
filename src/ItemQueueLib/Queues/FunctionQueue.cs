@@ -76,14 +76,42 @@ namespace SMC.Utilities.Queues
         /// <summary>
         /// Create a new function queue.
         /// </summary>
-        public FunctionQueue() : this(null, null, string.Empty) { }
+        public FunctionQueue() : this(null, null,null, string.Empty) { }
 
         /// <summary>
         /// Create a new function queue with the specific name.
         /// </summary>
         /// <param name="queueName">The name for this queue.</param>
         /// <remarks>The <paramref name="queueName"/> is also used as the name of the background thread.</remarks>
-        public FunctionQueue(string queueName) : this(null, null, queueName) { }
+        public FunctionQueue(string queueName) : this(null, null,null, queueName) { }
+
+        /// <summary>
+        /// Create a new function queue with the specific function.
+        /// </summary>
+        /// <param name="function">The function to call with the current item whose result is used to call the action on.</param>
+        public FunctionQueue(Func<T, TResult> function) : this(function, null, null, string.Empty) { }
+
+        /// <summary>
+        /// Create a new function queue with the specific function.
+        /// </summary>
+        /// <param name="function">The function to call with the current item whose result is used to call the action on.</param>
+        /// <param name="queueName">The name for this queue.</param>
+        public FunctionQueue(Func<T, TResult> function, string queueName) : this(function, null, null, queueName) { }
+
+        /// <summary>
+        /// Create a new function queue with the specific function.
+        /// </summary>
+        /// <param name="function">The function to call with the current item whose result is used to call the action on.</param>
+        /// <param name="callback">The callback that will be called for each item that is successfully processed without an exception.</param>
+        public FunctionQueue(Func<T, TResult> function, Action<T, TResult> callback) : this(function, null, callback, string.Empty) { }
+
+        /// <summary>
+        /// Create a new function queue with the specific function.
+        /// </summary>
+        /// <param name="function">The function to call with the current item whose result is used to call the action on.</param>
+        /// <param name="callback">The callback that will be called for each item that is successfully processed without an exception.</param>
+        /// <param name="queueName">The name for this queue.</param>
+        public FunctionQueue(Func<T, TResult> function, Action<T, TResult> callback, string queueName) : this(function, null, callback, queueName) { }
 
         /// <summary>
         /// Create a new function queue with the specified function.

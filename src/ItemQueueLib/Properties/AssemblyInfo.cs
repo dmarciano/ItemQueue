@@ -4,13 +4,13 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("ItemQueueLib")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("ItemQueue")]
+[assembly: AssemblyDescription("A set of queues to allow processing of items on a background thread with event notifications.")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("ItemQueueLib")]
+[assembly: AssemblyCompany("Sci-Med Coding")]
+[assembly: AssemblyProduct("ItemQueue")]
 [assembly: AssemblyCopyright("Copyright ©  2019")]
-[assembly: AssemblyTrademark("")]
+[assembly: AssemblyTrademark("Trademark ™ 2019")]
 [assembly: AssemblyCulture("")]
 
 // Setting ComVisible to false makes the types in this assembly not visible
@@ -32,4 +32,4 @@ using System.Runtime.InteropServices;
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyFileVersion("0.1.0.0")]

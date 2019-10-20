@@ -2,13 +2,13 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-[assembly: AssemblyTitle("ItemQueueLib.Tests")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("ItemQueue Tests")]
+[assembly: AssemblyDescription("Unit tests for the ItemQueue library.")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("ItemQueueLib.Tests")]
+[assembly: AssemblyCompany("Sci-Med Coding")]
+[assembly: AssemblyProduct("ItemQueue Tests")]
 [assembly: AssemblyCopyright("Copyright ©  2019")]
-[assembly: AssemblyTrademark("")]
+[assembly: AssemblyTrademark("Trademark ™ 2019")]
 [assembly: AssemblyCulture("")]
 
 [assembly: ComVisible(false)]
@@ -17,4 +17,4 @@ using System.Runtime.InteropServices;
 
 // [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyFileVersion("0.1.0.0")]

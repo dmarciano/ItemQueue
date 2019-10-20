@@ -8,6 +8,95 @@ namespace ItemQueueLib.Tests
     [TestClass]
     public class PredicateQueueTests
     {
+        // ReSharper disable once InconsistentNaming
+        private const string QUEUE_NAME = "predicate_queue_name";
+
+        [TestMethod]
+        public void ConstructorWithQueueNameTest()
+        {
+            var result = 0;
+            var predicateQueue = new PredicateQueue<int>(QUEUE_NAME);
+            predicateQueue.SetPredicate(value => value % 2 == 0);
+            predicateQueue.SetAction(value => result = value);
+            predicateQueue.Start();
+            predicateQueue.Enqueue(2);
+            predicateQueue.Stop(true);
+
+            Assert.IsTrue(result == 2);
+            Assert.AreEqual(predicateQueue.Name, QUEUE_NAME, false);
+        }
+
+        [TestMethod]
+        public void ConstructorWithPredicateTest()
+        {
+            var result = 0;
+            var predicateQueue = new PredicateQueue<int>(value => value % 2 == 0);
+            predicateQueue.SetAction(value => result = value);
+            predicateQueue.Start();
+            predicateQueue.Enqueue(2);
+            predicateQueue.Stop(true);
+
+            Assert.IsTrue(result == 2);
+        }
+
+        [TestMethod]
+        public void ConstructorWithPredicateActionTest()
+        {
+            var result = 0;
+            var predicateQueue = new PredicateQueue<int>(value => value %2==0, value => result = value);
+            predicateQueue.Start();
+            predicateQueue.Enqueue(2);
+            predicateQueue.Stop(true);
+
+            Assert.IsTrue(result == 2);
+        }
+
+        [TestMethod]
+        public void ConstructorWithPredicateActionCallbackTest()
+        {
+            var result = 0;
+            var callbackSum = 0;
+            var predicateQueue = new PredicateQueue<int>(value => value % 2 == 0, value => result = value, value => callbackSum += value);
+            predicateQueue.Start();
+            predicateQueue.Enqueue(1);
+            predicateQueue.Enqueue(2);
+            predicateQueue.Stop(true);
+
+            Assert.IsTrue(result == 2);
+            Assert.IsTrue(callbackSum == 2);
+        }
+
+        [TestMethod]
+        public void ConstructorWithPredicateQueueNameTest()
+        {
+            var result = 0;
+            var predicateQueue = new PredicateQueue<int>(value => value % 2==0, QUEUE_NAME);
+            predicateQueue.SetAction(value => result = value);
+            predicateQueue.Start();
+            predicateQueue.Enqueue(2);
+            predicateQueue.Stop(true);
+
+            Assert.IsTrue(result == 2);
+            Assert.AreEqual(predicateQueue.Name, QUEUE_NAME, false);
+        }
+
+        [TestMethod]
+        public void ConstructorWithAllParametersTest()
+        {
+            var result = 0;
+            var callbackSum = 0;
+            var predicateQueue = new PredicateQueue<int>(value => value % 2 == 0, value => result = value, value => callbackSum += value, QUEUE_NAME);
+            predicateQueue.Start();
+            predicateQueue.Enqueue(1);
+            predicateQueue.Enqueue(2);
+            predicateQueue.Stop(true);
+
+            Assert.IsTrue(result == 2);
+            Assert.IsTrue(callbackSum == 2);
+            Assert.AreEqual(predicateQueue.Name, QUEUE_NAME, false);
+        }
+
+
         [TestMethod]
         public void SumOfEvenTests()
         {
@@ -118,7 +207,22 @@ namespace ItemQueueLib.Tests
             Assert.AreEqual(result, "Hello, World!", false);
         }
 
-        //TODO: Test callbacks
+        [TestMethod]
+        public void CallbackTest()
+        {
+            var result = 0;
+            var callbackSum = 0;
+            var predicateQueue = new PredicateQueue<int>();
+            predicateQueue.SetPredicate(value => value % 2 == 0);
+            predicateQueue.SetAction(value => result = value);
+            predicateQueue.SetCallback(value => callbackSum += value);
+            predicateQueue.Start();
+            predicateQueue.Enqueue(2);
+            predicateQueue.Stop(true);
+
+            Assert.IsTrue(result == 2);
+            Assert.IsTrue(callbackSum == 2);
+        }
 
         [TestMethod]
         [ExpectedException(typeof(NoActionException))]
