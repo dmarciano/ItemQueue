@@ -99,6 +99,22 @@ namespace ItemQueueLib.Tests
         }
 
         [TestMethod]
+        public void IDisposableSummationTest()
+        {
+            var sum = 0;
+            using(var actionQueue = new ActionQueue<int>())
+            {
+                actionQueue.SetAction(value => sum += value);
+                actionQueue.Start();
+                actionQueue.Enqueue(1);
+                actionQueue.Enqueue(2);
+                actionQueue.Stop(true);
+            }
+
+            Assert.IsTrue(sum == 3);
+        }
+
+        [TestMethod]
         public void SummationListTest()
         {
             var sum = 0;
